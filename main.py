@@ -189,6 +189,85 @@ class Board:
 ######################################################################################################################
 #                                             algorithms
 
+from copy import deepcopy
+
+def alphabeta(board, tree_depth, alpha, beta, cpu_turn):
+    if tree_depth == 0 or board.winner() != None:
+        return board.evaluate(), board
+
+    if cpu_turn:
+        max_score = float('-inf')
+        best_move = None
+        for move in get_all_moves(board, WHITE):
+            score = alphabeta(move, tree_depth - 1, alpha, beta, False)[0] 
+            max_score = max(max_score, score)
+            if max_score == score:
+                best_move = move
+            alpha = max(alpha, score)
+            if beta <= alpha:
+                break
+        return max_score, best_move
+    else:
+        min_score = float('inf')
+        best_move = None
+        for move in get_all_moves(board, RED):
+            score = alphabeta(move, tree_depth - 1, alpha, beta, True)[0]
+            min_score = max(min_score, score)
+            if min_score == score:
+                best_move = move
+            beta = min(beta, score)
+            if beta <= alpha:
+                break
+        return min_score, best_move
+
+
+def minimax(board, tree_depth, cpu_turn):
+    if tree_depth == 0 or board.winner() != None:
+        return board.evaluate(), board
+
+    if cpu_turn:
+        max_score = float('-inf')
+        best_move = None
+        for move in get_all_moves(board, WHITE):
+            score = minimax(move, tree_depth - 1, False)[0]
+            max_score = max(max_score, score)
+            if max_score == score:
+                best_move = move
+        return max_score, best_move
+    else:
+        min_score = float('inf')
+        best_move = None
+        for move in get_all_moves(board, RED):
+            score = minimax(move, tree_depth - 1, True)[0]
+            min_score = min(min_score, score)
+            if min_score == score:
+                best_move = move
+        return min_score, best_move
+    
+import random
+
+def random_agent(board, color):
+    moves = get_all_moves(board, color)
+    return random.choice(moves)
+
+def get_all_moves(board, color):
+    moves = []
+    for checker in board.get_all_pieces(color):
+        valid_moves = board.get_valid_moves(checker)
+        for move, skip in valid_moves.items():
+            board_copy = deepcopy(board)
+            checker_copy = board_copy.get_piece(checker.row, checker.column)
+            new_board = simulate_move(checker_copy, move, board_copy, skip)
+            moves.append(new_board)
+
+    return moves
+
+def simulate_move(checker, move, board, skip):
+    board.move(checker, move[0], move[1])
+    if skip:
+        board.remove(skip)
+    
+    return board
 
 
 ###########################################################################################################################
