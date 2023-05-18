@@ -15,7 +15,39 @@ GREY = (128,128,128)
 CROWN = pygame.transform.scale(pygame.image.load('CROWN.png'), (44, 25))
 ###########################################################################################################
 #                                              piece
+# creating the actual pieces
+class Piece:
+    pad = 15 
+    outline = 2
 
+    def __init__(self, row, column, color):
+        self.row = row
+        self.column = column
+        self.color = color
+        self.king = False
+        self.x = 0
+        self.y = 0
+        self.calculate_position()
+
+    def calculate_position(self): # calculating the middle of the square for placing the piece
+        self.x = SQUARE_SIZE * self.column + SQUARE_SIZE // 2
+        self.y = SQUARE_SIZE * self.row + SQUARE_SIZE // 2
+
+    def make_king(self):  # change king variable if the piece becomes a king
+        self.king = True
+
+    def draw(self, win):
+        # drawing the piece
+        radius = SQUARE_SIZE // 2 - self.pad  # calculating radius
+        pygame.draw.circle(win, GREY, (self.x, self.y), radius + self.outline)  # drawing outer piece
+        pygame.draw.circle(win, self.color, (self.x, self.y), radius)  # drawing inner piece
+        if self.king: #drawing the crown
+            win.blit(CROWN, (self.x - CROWN.get_width() // 2, self.y - CROWN.get_height() // 2))
+
+    def move(self, row, column):
+        self.row = row
+        self.column = column
+        self.calculate_position()
 
 
 ########################################################################################################################
