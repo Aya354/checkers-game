@@ -12,7 +12,7 @@ BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 GREY = (128,128,128)
 
-CROWN = pygame.transform.scale(pygame.image.load('E:\\year 3\\AI_Project\\CROWN.png'), (44, 25))
+CROWN = pygame.transform.scale(pygame.image.load('CROWN.png'), (44, 25))
 ###########################################################################################################
 #                                              piece
 
@@ -20,8 +20,166 @@ CROWN = pygame.transform.scale(pygame.image.load('E:\\year 3\\AI_Project\\CROWN.
 
 ########################################################################################################################
 #                                              board
+class Board:
+    def __init__(self):
+        self.board = []  #creating empty list
+        self.red_left = self.white_left = 12  #number of pieces for each player
+        self.red_kings = self.white_kings = 0 #number of kings for each player
+        self.create_board()
+    
+    def create_board(self): # creates the board
+        for row in range(ROWS):
+            self.board.append([]) # creating empty list for each row
+            for column in range(COLUMNS):
+                if column % 2 == ((row + 1) % 2): #if true then the square will contain a piece initially
+                    if row < 3:
+                        self.board[row].append(Piece(row, column, WHITE))
+                    elif row > 4:
+                        self.board[row].append(Piece(row, column, RED))
+                    else:
+                        self.board[row].append(0)
+                else:  #the square will initially be without any piece
+                    self.board[row].append(0)
+                    
+    def get_piece(self, row, column): #returns the piece in the given row and column
+        return self.board[row][column]
+    
+    def draw_squares(self, win): #to draw the squares of the board
+        #fill the window with black color
+        win.fill(BLACK)
+        for row in range(ROWS):
+            for column in range(row % 2, COLUMNS, 2): #to draw the red squares
+                pygame.draw.rect(win, GREY, (row * SQUARE_SIZE, column * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+                
+    def draw(self, win):
+        # drawing board and pieces
+        self.draw_squares(win)
+        for row in range(ROWS):
+            for column in range(COLUMNS):
+                piece = self.board[row][column]
+                if piece != 0: #if the square value is not zero, then draw the piece
+                    piece.draw(win)
+                    
+    def remove(self, pieces):  #to remove pieces when a player jumps
+        for piece in pieces:
+            self.board[piece.row][piece.column] = 0  #to replace the piece place with zero to indicate there is no piece
+            if piece != 0:
+                #decreasing the number of pieces of the player with the removed piece
+                if piece.color == RED:
+                    self.red_left -= 1
+                else:
+                    self.white_left -= 1
+                    
+    def winner(self): #to determine if there is a winner
+        if self.red_left <= 0:
+            return WHITE
+        elif self.white_left <= 0:
+            return RED
+        
+        return None
+    
+    def move(self, piece, row, column):
+        self.board[piece.row][piece.column], self.board[row][column] = self.board[row][column], self.board[piece.row][piece.column]
+        piece.move(row, column)
+        # check to see if current position is the last or first row to make a king
+        if row == ROWS-1 or row == 0:
+            piece.make_king()
+            if piece.color == WHITE:
+                self.white_kings += 1
+            else:
+                self.red_kings += 1
+                
+    def get_valid_moves(self, piece):
+        moves = {} #a dictionary
+        left = piece.column - 1
+        right = piece.column + 1
+        row = piece.row
+        
+        if piece.color == RED or piece.king:
+            moves.update(self.go_left(row -1, max(row-3, -1), -1, piece.color, left))
+            moves.update(self.go_right(row -1, max(row-3, -1), -1, piece.color, right))
+        if piece.color == WHITE or piece.king:
+            moves.update(self.go_left(row +1, min(row+3, ROWS), 1, piece.color, left))
+            moves.update(self.go_right(row +1, min(row+3, ROWS), 1, piece.color, right))
+    
+        return moves
+    
+    def go_left(self, start, stop, step, color, left, skipped=[]):
+        moves = {}
+        last = []
+        for r in range(start, stop, step):
+            if left < 0: #to prevent going outside the board
+                break
+            
+            current = self.board[r][left]
+            if current == 0: #if the wanted cell is clear
+                if skipped and not last:
+                    break
+                elif skipped:
+                    moves[(r, left)] = last + skipped
+                else:
+                    moves[(r, left)] = last
+                
+                if last:
+                    if step == -1:
+                        row = max(r-3, 0)
+                    else:
+                        row = min(r+3, ROWS)
+                    moves.update(self.go_left(r+step, row, step, color, left-1,skipped=last))
+                    moves.update(self.go_right(r+step, row, step, color, left+1,skipped=last))
+                break
+            elif current.color == color: #if the same player on the wanted cell
+                break
+            else: #if the enemy is on the wanted cell
+                last = [current]
 
+            left -= 1
+        
+        return moves
 
+    def go_right(self, start, stop, step, color, right, skipped=[]):
+        moves = {}
+        last = []
+        for r in range(start, stop, step):
+            if right >= COLUMNS:
+                break
+            
+            current = self.board[r][right]
+            if current == 0:
+                if skipped and not last:
+                    break
+                elif skipped:
+                    moves[(r, right)] = last + skipped
+                else:
+                    moves[(r, right)] = last
+                
+                if last:
+                    if step == -1:
+                        row = max(r-3, 0)
+                    else:
+                        row = min(r+3, ROWS)
+                    moves.update(self.go_left(r+step, row, step, color, right-1,skipped=last))
+                    moves.update(self.go_right(r+step, row, step, color, right+1,skipped=last))
+                break
+            elif current.color == color:
+                break
+            else:
+                last = [current]
+
+            right += 1
+        
+        return moves
+    
+    def evaluate(self):
+        return self.white_left - self.red_left + (self.white_kings * 0.5 - self.red_kings * 0.5) 
+    
+    def get_all_pieces(self, color):
+        checkers = []
+        for row in self.board:
+            for checker in row:
+                if checker != 0 and checker.color == color:
+                    checkers.append(checker)
+        return checkers
 
 ###################################################################################################################
 #                                              game
