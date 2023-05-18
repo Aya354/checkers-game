@@ -444,3 +444,50 @@ def selections():
         screen.fill((255, 255, 255))
         manager.draw_ui(screen)
         pygame.display.update()
+        
+def main():
+    run = True
+    clock = pygame.time.Clock()
+    game = Game(WIN)
+    pygame.display.set_caption('Checkers')
+    algorithm, difficulty =selections()
+    if difficulty =='Easy':
+        difficulty_level=1
+    else:
+        difficulty_level=3
+
+    while run:
+        clock.tick(FPS)
+
+        
+        if game.turn == WHITE:
+            pygame.time.delay(100)
+            if algorithm == 'Alpha-beta':
+                value, new_board = alphabeta(game.get_board(), difficulty_level, -10000, 10000, WHITE)
+            else:
+                value, new_board = minimax(game.get_board(), difficulty_level, WHITE)
+            game.ai_move(new_board) 
+            
+        else:
+            # Random agent's turn
+            pygame.time.delay(100) 
+            move = random_agent(game.get_board(), RED)
+            game.ai_move(move)
+            
+        if game.winner() != None:
+            winner = game.winner()
+            pygame.time.delay(1000)
+            draw_winner(winner)
+            run = False
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                pygame.quit()
+                
+
+        game.update()
+
+   
+
+main()
